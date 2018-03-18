@@ -9,6 +9,8 @@ import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.widget.Scroller;
 
+import java.util.HashMap;
+
 /**
  * Created by BigFaceBear on 2018.03.16
  */
@@ -32,11 +34,6 @@ public class ScrollLayout extends ViewGroup {
     private float mXMove;
 
     /**
-     * 上次触发ACTION_MOVE事件时的屏幕坐标
-     */
-    private float mXLastMove;
-
-    /**
      * 界面可滚动的左边界
      */
     private int leftBorder;
@@ -46,7 +43,8 @@ public class ScrollLayout extends ViewGroup {
      */
     private int rightBorder;
 
-    //HashMap<Integer,Float>
+    //key为pointerId，value为每个pointerId前一次移动的X坐标
+    HashMap<Integer, Float> mLastMoveXMap;
 
     public ScrollLayout(Context context) {
         super(context);
@@ -57,6 +55,7 @@ public class ScrollLayout extends ViewGroup {
         mScroller = new Scroller(context);
         ViewConfiguration configuration = ViewConfiguration.get(context);
         mTouchSlop = configuration.getScaledPagingTouchSlop();
+        mLastMoveXMap = new HashMap<>();
     }
 
     public ScrollLayout(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
@@ -91,15 +90,22 @@ public class ScrollLayout extends ViewGroup {
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
+        int pid = ev.getPointerId(0);
+
         switch (ev.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                mXDown = ev.getRawX();
-                mXLastMove = mXDown;
+                if (!mScroller.isFinished()) {
+                    mScroller.abortAnimation();
+                }
+
+                mXDown = ev.getX();
+                mLastMoveXMap.put(pid, mXDown);
                 break;
             case MotionEvent.ACTION_MOVE:
-                mXMove = ev.getRawX();
+                mXMove = ev.getX();
                 float diff = Math.abs(mXMove - mXDown);
-                mXLastMove = mXMove;
+                mLastMoveXMap.put(pid, ev.getX(0));
+
                 // 当手指拖动值大于TouchSlop值时，认为应该进行滚动，拦截子控件的事件
                 if (diff > mTouchSlop) {
                     return true;
@@ -173,15 +179,31 @@ public class ScrollLayout extends ViewGroup {
 //
 //        }
 //        Log.i("bear", "event is " + event);
+        int pointerIndex;
+        int pointerId;
 
-        switch (ev.getAction()) {
+        switch (ev.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 return true;
+            case MotionEvent.ACTION_POINTER_DOWN:
+                pointerIndex = ev.getActionIndex();
+                pointerId = ev.getPointerId(pointerIndex);
+                mLastMoveXMap.put(pointerId, ev.getX(pointerIndex));
+                break;
+            case MotionEvent.ACTION_POINTER_UP:
+                pointerIndex = ev.getActionIndex();
+                pointerId = ev.getPointerId(pointerIndex);
+                mLastMoveXMap.remove(pointerId);
+                break;
             case MotionEvent.ACTION_MOVE:
+                //拿到主手指的当前X坐标
+                mXMove = ev.getX();
 
-                mXMove = ev.getRawX();  //拿到的是第一个手指的x坐标
+                //拿到当前主手指上一次移动的X坐标
+                pointerId = ev.getPointerId(0);
+                float lastMoveX = mLastMoveXMap.get(pointerId);
 
-                int scrolledX = (int) (mXLastMove - mXMove);
+                int scrolledX = (int) (lastMoveX - mXMove);
                 if (getScrollX() + scrolledX < leftBorder) {
                     scrollTo(leftBorder, 0);
                     return true;
@@ -191,10 +213,14 @@ public class ScrollLayout extends ViewGroup {
                 }
 
                 scrollBy(scrolledX, 0);
-                mXLastMove = mXMove;
+
+                for (int i = 0; i < ev.getPointerCount(); i++) {
+                    pointerId = ev.getPointerId(i);
+                    mLastMoveXMap.put(pointerId, ev.getX(i));
+                }
                 return true;
             case MotionEvent.ACTION_UP:
-                mScroller.startScroll(getScrollX(), 0, -getScrollX(), 0, 5000);
+                mScroller.startScroll(getScrollX(), 0, -getScrollX(), 0, 1000);
                 invalidate();
                 return true;
         }
