@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.fearlessbear.scrollerexercise.ScrollLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.fearlessbear.scrollerexercise.MainActivity">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:background="@color/colorAccent"
+        android:text="第一页面"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:background="@color/colorPrimary"
+        android:text="第二页面"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:background="@color/colorPrimaryDark"
+        android:text="第三页面"/>
+
+</com.fearlessbear.scrollerexercise.ScrollLayout>
